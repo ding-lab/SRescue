@@ -1,0 +1,9 @@
+SAMPLE	/path/to/sample_list.tsv
+OUTPATH	/path/to/output_directory
+SURVIVOR	/path/to/SURVIVOR
+CUTESV	/path/to/cuteSV
+BGZIP	/path/to/bgzip
+TABIX	/path/to/tabix
+PIPE_SCRIPT_PATH	/path/to/scripts
+REF	/path/to/reference.fa
+SAMTOOLS	/path/to/samtools
