@@ -1,5 +1,6 @@
 $inBEDPE=$ARGV[0];
-$outdir=$ARGV[1];
+$inVCF=$ARGV[1];
+$outdir=$ARGV[2];
 open(file,"$inBEDPE");
 open(res1,">$outdir/sronly.tsv");
 open(res2,">$outdir/lronly.tsv");
@@ -28,8 +29,8 @@ while(<file>)
 		$shared{$token[3]."\t".$token[4]}=$token[7];
 	}
 }
-$file=$inBEDPE;
-$file=~s/bedpe$/vcf/g;
+$file=$inVCF;
+#$file=~s/bedpe$/vcf/g;	# specify paths explicitly
 # print $file."\n";
 open(file,"$file");
 open(res4,">$outdir/sronly.vcf");

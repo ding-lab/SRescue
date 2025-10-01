@@ -1,0 +1,13 @@
+STORAGE_ALLOCATION="m.wyczalkowski"
+
+NF="SRescue.nf"
+CONFIG="SRescue.config"
+OUTD="../nextflow_out"
+mkdir -p $OUTD
+
+
+LSF_DOCKER_VOLUMES="/scratch1/fs1/ris:/scratch1/fs1/ris /storage1/fs1/m.wyczalkowski/Active:/storage1/fs1/m.wyczalkowski/Active /storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active" \
+thpc-terminal bash -c "nextflow run $NF -c $CONFIG --outdir $OUTD $@"
+
+
+
