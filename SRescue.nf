@@ -20,6 +20,7 @@ def tum_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Lon
 // Process 1: Merge LR and SR VCFs using SURVIVOR
 // requires SURVIVOR
 process merge_lr_sr {
+    label 'survivor'
     input:
     path(lrvcf)
     path(srvcf)
@@ -38,6 +39,7 @@ process merge_lr_sr {
 // Process 2: Polish SURVIVOR output
 // Requires PERL
 process polish_survivor {
+    label 'perl'
     input:
     path(merged_vcf)
 
@@ -53,14 +55,15 @@ process polish_survivor {
 
 // Process 3: Get only SVs
 process get_only_svs {
+    label 'perl'
     input:
     path(polished_bedpe)
     path(polished_vcf)
     
     output:
-    path("sronly.tsv")
-    path("lronly.tsv")
-    path("shared.tsv")
+//    path("sronly.tsv")
+//    path("lronly.tsv")
+//    path("shared.tsv")
     path("sronly.vcf")
     path("lronly.vcf")
     path("shared.vcf")
