@@ -1,1 +1,1 @@
-IMAGE="mwyczalkowski/cutesv:20251001"
+IMAGE="mwyczalkowski/cutesv:20251002"
