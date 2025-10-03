@@ -1,1 +1,1 @@
-IMAGE="mwyczalkowski/perl-util:20251001"
+IMAGE="mwyczalkowski/perl-util:20251003"
