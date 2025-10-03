@@ -254,13 +254,9 @@ process final_polish_and_compress {
 }
 
 // Main workflow
-workflow {
+workflow SRescue {
     // Process 1
     sr2lr = merge_lr_sr(lrvcf_fn, srvcf_fn)
-//   sr2lr = merge_lr_sr(
-//        channel.fromPath(lrvcf_fn),
-//        channel.fromPath(srvcf_fn)
-//    )
 
     // TODO: should not be passing the scripts as a channel from here, should be in the process itself
     // Process 2
