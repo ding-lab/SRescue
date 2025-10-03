@@ -1,12 +1,14 @@
-$INPUT=$ARGV[0];
-$OUTPUT=$ARGV[1];
-$OUTPUT2=$ARGV[2];
+$INPUT=$ARGV[0];    # final_sr2lr_sv_vcf
+$INPUT2=$ARGV[1];   # shared.polished.bedpe
+$OUTPUT=$ARGV[2];   # final.sr2lr.sv.bedpe 
+$OUTPUT2=$ARGV[3];  # final.sr2lr.polished.vcf
 
-$shared=$INPUT;
-@filelist=split(/\//,$INPUT);
-$filelist[-1]="shared.polished.bedpe";
-$newpath=join("/",@filelist);
-open(file,"$newpath");
+#$shared=$INPUT;
+#@filelist=split(/\//,$INPUT);
+#$filelist[-1]="shared.polished.bedpe";
+#$newpath=join("/",@filelist);
+open(file,"$INPUT2");
+
 while(<file>)
 {
 	chomp;

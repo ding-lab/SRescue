@@ -2,11 +2,10 @@
 params.samplelist = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/dat/samplelist.dat"
 params.survivor = "/opt/SURVIVOR/Debug/SURVIVOR"
 params.cutesv = "/opt/conda/envs/env/bin/cuteSV"
-params.bgzip = "bgzip"
-params.tabix = "tabix"
+params.bgzip = "/usr/bin/bgzip"
+params.tabix = "/usr/bin/tabix"
 params.perl = "/usr/bin/perl"
-params.ref = "ref.fa"
-params.samtools = "samtools"
+params.samtools = "/usr/local/bin/samtools"
 params.config = null
 
 // Note: must not include the "/rdcw/fs2/home1/Active" prefix to home 
@@ -14,6 +13,8 @@ params.script_polish_survivor = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescu
 params.script_get_only_svs = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/02_get.only.pl"
 params.script_vcf4fc = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/03_makeVCF4forceCalling.pl"
 params.script_finalfilter = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/04_get.finalfilter_cuteSV_ins.pl"
+params.script_process_supporting_reads = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/04_2_correct.rb.pl"
+params.script_final_polish = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/05_final_polish.pl"
 
 params.reference = "/storage1/fs1/dinglab/Active/Projects/PECGS/ref_genome/GRCh38.d1.vd1.fa"
 
@@ -156,14 +157,110 @@ process get_final_filter {
     """
 }
 
+// Process 8: Process supporting reads
+process process_supporting_reads {
+    label 'samtools'
+    
+    input:
+    path(supread_loci_bed)
+    path(tumorbam)
+    path("finalfilter_cutesv.vcf")
+    path(supread_tsv)
+    path(perl_script)
+    
+    output:
+    path("finalfilter_cutesv.vcf")  // same filename but different file than the input
+    
+    script:
+    """
+    ${params.samtools} depth -b ${supread_loci_bed} ${tumorbam} > supread.depth.tsv
+    ${params.samtools} view -N ${supread_tsv} ${tumorbam} > supread.bam.tsv
+    ${params.perl} ${perl_script} ./
+    rm finalfilter_cutesv2.vcf && mv finalfilter_cutesv3.vcf finalfilter_cutesv.vcf
+    """
+
+//    04_2_correct.rb.pl 
+//        reads - open(supread,"$workdir/supread.bam.tsv");
+//        reads - open(file,"$workdir/finalfilter_cutesv.vcf");
+//        reads - open(file,"$workdir/supread.depth.tsv");
+//        writes - open(res,">$workdir/finalfilter_cutesv2.vcf");
+//        writes - open(res,">$workdir/finalfilter_cutesv3.vcf");
+}
+
+// Process 9: Polish all VCFs
+process polish_all_vcfs {
+    label 'perl'
+    
+    input:
+    path(sronly_vcf)
+    path(lronly_vcf)
+    path(shared_vcf)
+    path(perl_script)
+    
+    output:
+    path("sronly.polished.bedpe")
+    path("sronly.polished.vcf")
+    path("lronly.polished.bedpe")
+    path("lronly.polished.vcf")
+    path("shared.polished.bedpe")
+    path("shared.polished.vcf")
+    
+    script:
+    """
+    ${params.perl} ${perl_script} ${sronly_vcf} sronly.polished.bedpe sronly.polished.vcf
+    ${params.perl} ${perl_script} ${lronly_vcf} lronly.polished.bedpe lronly.polished.vcf
+    ${params.perl} ${perl_script} ${shared_vcf} shared.polished.bedpe shared.polished.vcf
+    """
+}
+
+// Process 10: Merge final VCFs
+process merge_final_vcfs {
+    label 'survivor'
+    
+    input:
+    path(lrvcf)
+    path(final_filter_vcf)
+
+    output:
+    path("final.sr2lr.sv.vcf")
+    
+    script:
+    """
+    echo "${lrvcf}" > final.vcflist
+    echo "${final_filter_vcf}" >> final.vcflist
+    ${params.survivor} merge final.vcflist 1000 1 0 0 0 50 final.sr2lr.sv.vcf
+    """
+}
+
+// Process 11: Final polish and compress
+process final_polish_and_compress {
+    label 'perl'
+    
+    input:
+    path(final_sr2lr_sv_vcf)
+    path(shared_polished_bedpe)
+    path(perl_script)
+    
+    output:
+    path("final.sr2lr.polished.vcf.gz")
+    path("final.sr2lr.polished.vcf.gz.tbi")
+    
+    script:
+    """
+    ${params.perl} ${perl_script} ${final_sr2lr_sv_vcf} ${shared_polished_bedpe} final.sr2lr.sv.bedpe final.sr2lr.polished.vcf
+    ${params.bgzip} -c final.sr2lr.polished.vcf > final.sr2lr.polished.vcf.gz
+    ${params.tabix} final.sr2lr.polished.vcf.gz
+    """
+}
 
 // Main workflow
 workflow {
     // Process 1
-    sr2lr = merge_lr_sr(
-        channel.fromPath(lrvcf_fn),
-        channel.fromPath(srvcf_fn)
-    )
+    sr2lr = merge_lr_sr(lrvcf_fn, srvcf_fn)
+//   sr2lr = merge_lr_sr(
+//        channel.fromPath(lrvcf_fn),
+//        channel.fromPath(srvcf_fn)
+//    )
 
     // TODO: should not be passing the scripts as a channel from here, should be in the process itself
     // Process 2
@@ -183,5 +280,17 @@ workflow {
 
     // Process 7
     (vcf, bed, tsv) = get_final_filter(normal_cutesv, tumor_cutesv, params.script_finalfilter)
+
+    // Process 8
+    ffc_vcf = process_supporting_reads(bed, tum_fn, vcf, tsv, params.script_process_supporting_reads)
+
+    // Process 9
+    (srp_bpe, srp_vcf, lrp_bpe, lrp_vcf, shp_bpe, shp_vcf) = polish_all_vcfs(sro, lro, sha, params.script_polish_survivor)
+
+    // Process 10
+    sr2lr_sv_vcf = merge_final_vcfs(lrvcf_fn, ffc_vcf)
+
+    // Process 11
+    final_polish_and_compress(sr2lr_sv_vcf, shp_bpe, params.script_final_polish)
 }
 
