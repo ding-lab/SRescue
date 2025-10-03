@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 $workdir=$ARGV[0];
 open(supread,"$workdir/supread.bam.tsv");
 while(<supread>)

@@ -4,20 +4,30 @@ params.survivor = "/opt/SURVIVOR/Debug/SURVIVOR"
 params.cutesv = "/opt/conda/envs/env/bin/cuteSV"
 params.bgzip = "/usr/bin/bgzip"
 params.tabix = "/usr/bin/tabix"
-params.perl = "/usr/bin/perl"
+//params.perl = "/usr/bin/perl"   
 params.samtools = "/usr/local/bin/samtools"
 params.config = null
 
 // Note: must not include the "/rdcw/fs2/home1/Active" prefix to home 
-params.script_polish_survivor = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/01_polish_survivor.pl"
-params.script_get_only_svs = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/02_get.only.pl"
-params.script_vcf4fc = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/03_makeVCF4forceCalling.pl"
-params.script_finalfilter = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/04_get.finalfilter_cuteSV_ins.pl"
-params.script_process_supporting_reads = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/04_2_correct.rb.pl"
-params.script_final_polish = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/script/05_final_polish.pl"
+
+
+/*
+// Scripts 
+// should not be passing paths to scripts on the command line.  A preferred approach seems to be binary modules
+// documentation: https://www.nextflow.io/docs/latest/module.html#module-binaries
+// example: https://github.com/davidmasp/hello-modbins/tree/master
+
+// may need to add these to the bin directory
+// Also: https://sateeshperi.github.io/nextflow_varcal/nextflow/nextflow_modules
+// also here: https://github.com/nextflow-io/nextflow/discussions/4651
+*/
+
+// all perl scripts are added to the bin directory
+// https://www.nextflow.io/docs/latest/sharing.html#the-bin-directory
 
 params.reference = "/storage1/fs1/dinglab/Active/Projects/PECGS/ref_genome/GRCh38.d1.vd1.fa"
 
+# TODO: how to nicely specify secondary / index file?
 def lrvcf_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.chr2.vcf"
 def srvcf_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/SR.chr2.vcf"
 def norm_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.normal.chr2.bam"
@@ -50,7 +60,6 @@ process polish_survivor {
     label 'perl'
     input:
     path(merged_vcf)
-    path(perl_script)
 
     output:
     path("sr2lr.polished.bedpe")
@@ -58,7 +67,7 @@ process polish_survivor {
 
     script:
     """
-    ${params.perl} ${perl_script} ${merged_vcf} sr2lr.polished.bedpe sr2lr.polished.vcf
+    01_polish_survivor.pl ${merged_vcf} sr2lr.polished.bedpe sr2lr.polished.vcf
     """
 }
 
@@ -68,7 +77,6 @@ process get_only_svs {
     input:
     path(polished_bedpe)
     path(polished_vcf)
-    path(perl_script)
     
     output:
 //    path("sronly.tsv")
@@ -80,7 +88,7 @@ process get_only_svs {
     
     script:
     """
-    ${params.perl} ${perl_script} ${polished_bedpe} ${polished_vcf} ./
+    02_get.only.pl ${polished_bedpe} ${polished_vcf} ./
     """
 }
 
@@ -89,14 +97,13 @@ process make_vcf_for_force_calling {
     label 'perl'
     input:
     path(sronly_vcf)
-    path(perl_script)
     
     output:
     path("sronly4fc.vcf")
     
     script:
     """
-    ${params.perl} ${perl_script} ${sronly_vcf}
+    03_makeVCF4forceCalling.pl ${sronly_vcf}
     """
 }
 
@@ -105,8 +112,8 @@ process make_vcf_for_force_calling {
 process run_cutesv_normal {
     label 'cutesv'
     input:
-    path bam
-    path bai
+    path normal_bam
+    path normal_bai
     path reference
     path sronly4fc_vcf
 
@@ -123,8 +130,8 @@ process run_cutesv_normal {
 process run_cutesv_tumor {
     label 'cutesv'
     input:
-    path bam
-    path bai
+    path tumor_bam
+    path tumor_bai
     path reference
     path sronly4fc_vcf
 
@@ -144,7 +151,6 @@ process get_final_filter {
     input:
     path "cutesv_tumor.call.vcf"
     path "cutesv_normal.call.vcf"
-    path(perl_script)
     
     output:
     path("finalfilter_cutesv.vcf")
@@ -153,7 +159,7 @@ process get_final_filter {
     
     script:
     """
-    ${params.perl} ${perl_script} ./
+    04_get.finalfilter_cuteSV_ins.pl ./
     """
 }
 
@@ -166,7 +172,6 @@ process process_supporting_reads {
     path(tumorbam)
     path("finalfilter_cutesv.vcf")
     path(supread_tsv)
-    path(perl_script)
     
     output:
     path("finalfilter_cutesv.vcf")  // same filename but different file than the input
@@ -175,7 +180,7 @@ process process_supporting_reads {
     """
     ${params.samtools} depth -b ${supread_loci_bed} ${tumorbam} > supread.depth.tsv
     ${params.samtools} view -N ${supread_tsv} ${tumorbam} > supread.bam.tsv
-    ${params.perl} ${perl_script} ./
+    04_2_correct.rb.pl ./
     rm finalfilter_cutesv2.vcf && mv finalfilter_cutesv3.vcf finalfilter_cutesv.vcf
     """
 
@@ -195,7 +200,6 @@ process polish_all_vcfs {
     path(sronly_vcf)
     path(lronly_vcf)
     path(shared_vcf)
-    path(perl_script)
     
     output:
     path("sronly.polished.bedpe")
@@ -207,9 +211,9 @@ process polish_all_vcfs {
     
     script:
     """
-    ${params.perl} ${perl_script} ${sronly_vcf} sronly.polished.bedpe sronly.polished.vcf
-    ${params.perl} ${perl_script} ${lronly_vcf} lronly.polished.bedpe lronly.polished.vcf
-    ${params.perl} ${perl_script} ${shared_vcf} shared.polished.bedpe shared.polished.vcf
+    01_polish_survivor.pl ${sronly_vcf} sronly.polished.bedpe sronly.polished.vcf
+    01_polish_survivor.pl ${lronly_vcf} lronly.polished.bedpe lronly.polished.vcf
+    01_polish_survivor.pl ${shared_vcf} shared.polished.bedpe shared.polished.vcf
     """
 }
 
@@ -239,7 +243,6 @@ process final_polish_and_compress {
     input:
     path(final_sr2lr_sv_vcf)
     path(shared_polished_bedpe)
-    path(perl_script)
     
     output:
     path("final.sr2lr.polished.vcf.gz")
@@ -247,26 +250,34 @@ process final_polish_and_compress {
     
     script:
     """
-    ${params.perl} ${perl_script} ${final_sr2lr_sv_vcf} ${shared_polished_bedpe} final.sr2lr.sv.bedpe final.sr2lr.polished.vcf
+    05_final_polish.pl ${final_sr2lr_sv_vcf} ${shared_polished_bedpe} final.sr2lr.sv.bedpe final.sr2lr.polished.vcf
     ${params.bgzip} -c final.sr2lr.polished.vcf > final.sr2lr.polished.vcf.gz
     ${params.tabix} final.sr2lr.polished.vcf.gz
     """
 }
 
 // Main workflow
-workflow SRescue {
+
+// TODO: stage outputs nicely
+// final.sr2lr.polished.vcf.gz 
+// finalfilter_cutesv.vcf
+// shared.polished.vcf
+// sronly.polished.vcf
+// lronly.polished.vcf
+
+workflow {
     // Process 1
     sr2lr = merge_lr_sr(lrvcf_fn, srvcf_fn)
 
     // TODO: should not be passing the scripts as a channel from here, should be in the process itself
     // Process 2
-    (s2_bedpe, s2_vcf) = polish_survivor(sr2lr, params.script_polish_survivor)
+    (s2_bedpe, s2_vcf) = polish_survivor(sr2lr)
 
     // Process 3
-    (sro, lro, sha) = get_only_svs(s2_bedpe, s2_vcf, params.script_get_only_svs)
+    (sro, lro, sha) = get_only_svs(s2_bedpe, s2_vcf)
 
     // Process 4
-    sro4fc = make_vcf_for_force_calling(sro, params.script_vcf4fc)
+    sro4fc = make_vcf_for_force_calling(sro)
 
     // Process 5 - cuteSV on normal
     normal_cutesv = run_cutesv_normal(norm_fn, norm_bai, params.reference, sro4fc)
@@ -275,18 +286,18 @@ workflow SRescue {
     tumor_cutesv = run_cutesv_tumor(tum_fn, tum_bai, params.reference, sro4fc)
 
     // Process 7
-    (vcf, bed, tsv) = get_final_filter(normal_cutesv, tumor_cutesv, params.script_finalfilter)
+    (vcf, bed, tsv) = get_final_filter(normal_cutesv, tumor_cutesv)
 
     // Process 8
-    ffc_vcf = process_supporting_reads(bed, tum_fn, vcf, tsv, params.script_process_supporting_reads)
+    ffc_vcf = process_supporting_reads(bed, tum_fn, vcf, tsv)
 
     // Process 9
-    (srp_bpe, srp_vcf, lrp_bpe, lrp_vcf, shp_bpe, shp_vcf) = polish_all_vcfs(sro, lro, sha, params.script_polish_survivor)
+    (srp_bpe, srp_vcf, lrp_bpe, lrp_vcf, shp_bpe, shp_vcf) = polish_all_vcfs(sro, lro, sha)
 
     // Process 10
     sr2lr_sv_vcf = merge_final_vcfs(lrvcf_fn, ffc_vcf)
 
     // Process 11
-    final_polish_and_compress(sr2lr_sv_vcf, shp_bpe, params.script_final_polish)
+    final_polish_and_compress(sr2lr_sv_vcf, shp_bpe)
 }
 

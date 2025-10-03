@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 $INPUT=$ARGV[0];
 $OUTPUT=$ARGV[1];
 $OUTPUT2=$ARGV[2];

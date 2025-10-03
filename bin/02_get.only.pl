@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 $inBEDPE=$ARGV[0];
 $inVCF=$ARGV[1];
 $outdir=$ARGV[2];

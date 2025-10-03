@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 $INPUT=$ARGV[0];    # final_sr2lr_sv_vcf
 $INPUT2=$ARGV[1];   # shared.polished.bedpe
 $OUTPUT=$ARGV[2];   # final.sr2lr.sv.bedpe 

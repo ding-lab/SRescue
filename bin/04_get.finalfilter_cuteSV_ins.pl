@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 $path=$ARGV[0];
 $tumor=$path."/cutesv_tumor.call.vcf";
 $normal=$path."/cutesv_normal.call.vcf";

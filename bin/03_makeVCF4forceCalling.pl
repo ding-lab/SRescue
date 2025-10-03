@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 $input=$ARGV[0];
 open(file,"$input");
 $output=$input;
