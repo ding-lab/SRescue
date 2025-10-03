@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cpanminus \
     locales \
+    bzip2 \
+    tabix \
     && apt-get clean
 
 # Set the locale so perl doesn't complain
