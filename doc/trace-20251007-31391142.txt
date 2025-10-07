@@ -1,0 +1,12 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	c4/bd65e2	772048	merge_lr_sr	CACHED	0	2025-10-03 17:18:36.894	8.1s	5ms	-	-	-	-	-
+2	77/35ec2c	772103	polish_survivor	CACHED	0	2025-10-03 17:30:44.353	4.6s	4ms	-	-	-	-	-
+3	6f/376c40	772104	get_only_svs	CACHED	0	2025-10-03 17:30:49.062	39.9s	35s	-	-	-	-	-
+4	12/f41935	772107	make_vcf_for_force_calling	CACHED	0	2025-10-03 17:31:29.248	4.7s	4ms	-	-	-	-	-
+5	6e/37f5e2	772192	polish_all_vcfs	CACHED	0	2025-10-03 17:35:26.311	4.1s	11ms	-	-	-	-	-
+7	ca/56874d	956228	run_cutesv_tumor (1)	CACHED	0	2025-10-06 12:09:38.277	3m 49s	3m 40s	-	-	-	-	-
+6	6e/e9b336	27774	run_cutesv_normal (1)	COMPLETED	0	2025-10-07 08:43:12.466	3m 29s	2m 42s	176.4%	415.1 MB	16.8 GB	31.9 GB	92.5 MB
+8	f1/090d2e	27866	get_final_filter (1)	COMPLETED	0	2025-10-07 08:46:42.045	9.8s	15ms	90.1%	2.8 MB	11.1 MB	67.7 KB	3.3 KB
+9	98/adefc9	27867	process_supporting_reads (1)	COMPLETED	0	2025-10-07 08:46:52.221	11m 45s	11m 30s	99.9%	7.1 MB	27 MB	87.1 GB	6.8 KB
+10	27/95bc8f	28333	merge_final_vcfs (1)	COMPLETED	0	2025-10-07 08:58:37.179	44.7s	14ms	88.9%	2.4 MB	11.5 MB	69.5 KB	5.2 KB
+11	48/d89bc7	28463	final_polish_and_compress (1)	COMPLETED	0	2025-10-07 08:59:22.023	4.9s	18ms	112.9%	2.8 MB	11.1 MB	79.8 KB	7.1 KB

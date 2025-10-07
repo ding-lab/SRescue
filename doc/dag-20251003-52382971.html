@@ -1,0 +1,105 @@
+<!--
+  ~ Copyright 2013-2023, Seqera Labs
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+</head>
+<body>
+<pre class="mermaid" style="text-align: center;">
+flowchart TB
+    subgraph " "
+    v0["lrvcf"]
+    v1["srvcf"]
+    v3["perl_script"]
+    v5["perl_script"]
+    v7["perl_script"]
+    v9["bam"]
+    v10["bai"]
+    v11["reference"]
+    v13["bam"]
+    v14["bai"]
+    v15["reference"]
+    v17["perl_script"]
+    v19["tumorbam"]
+    v20["perl_script"]
+    v22["perl_script"]
+    v29["lrvcf"]
+    v31["perl_script"]
+    end
+    v2([merge_lr_sr])
+    v4([polish_survivor])
+    v6([get_only_svs])
+    v8([make_vcf_for_force_calling])
+    v12([run_cutesv_normal])
+    v16([run_cutesv_tumor])
+    v18([get_final_filter])
+    v21([process_supporting_reads])
+    v23([polish_all_vcfs])
+    subgraph " "
+    v24["shp_vcf"]
+    v25["lrp_vcf"]
+    v26["lrp_bpe"]
+    v27["srp_vcf"]
+    v28["srp_bpe"]
+    v33[" "]
+    v34[" "]
+    end
+    v30([merge_final_vcfs])
+    v32([final_polish_and_compress])
+    v0 --> v2
+    v1 --> v2
+    v2 --> v4
+    v3 --> v4
+    v4 --> v6
+    v5 --> v6
+    v6 --> v8
+    v6 --> v23
+    v7 --> v8
+    v8 --> v12
+    v8 --> v16
+    v9 --> v12
+    v10 --> v12
+    v11 --> v12
+    v12 --> v18
+    v13 --> v16
+    v14 --> v16
+    v15 --> v16
+    v16 --> v18
+    v17 --> v18
+    v18 --> v21
+    v19 --> v21
+    v20 --> v21
+    v21 --> v30
+    v22 --> v23
+    v23 --> v28
+    v23 --> v27
+    v23 --> v26
+    v23 --> v25
+    v23 --> v32
+    v23 --> v24
+    v29 --> v30
+    v30 --> v32
+    v31 --> v32
+    v32 --> v34
+    v32 --> v33
+
+</pre>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script>
+</body>
+</html>

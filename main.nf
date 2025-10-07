@@ -1,40 +1,3 @@
-// Default parameter values
-params.samplelist = "/home/m.wyczalkowski/Projects/Adhoc/2025/SRescue/SRescue/dat/samplelist.dat"
-params.survivor = "/opt/SURVIVOR/Debug/SURVIVOR"
-params.cutesv = "/opt/conda/envs/env/bin/cuteSV"
-params.bgzip = "/usr/bin/bgzip"
-params.tabix = "/usr/bin/tabix"
-//params.perl = "/usr/bin/perl"   
-params.samtools = "/usr/local/bin/samtools"
-params.config = null
-
-// Note: must not include the "/rdcw/fs2/home1/Active" prefix to home 
-
-
-/*
-// Scripts 
-// should not be passing paths to scripts on the command line.  A preferred approach seems to be binary modules
-// documentation: https://www.nextflow.io/docs/latest/module.html#module-binaries
-// example: https://github.com/davidmasp/hello-modbins/tree/master
-
-// may need to add these to the bin directory
-// Also: https://sateeshperi.github.io/nextflow_varcal/nextflow/nextflow_modules
-// also here: https://github.com/nextflow-io/nextflow/discussions/4651
-*/
-
-// all perl scripts are added to the bin directory
-// https://www.nextflow.io/docs/latest/sharing.html#the-bin-directory
-
-params.reference = "/storage1/fs1/dinglab/Active/Projects/PECGS/ref_genome/GRCh38.d1.vd1.fa"
-
-# TODO: how to nicely specify secondary / index file?
-def lrvcf_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.chr2.vcf"
-def srvcf_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/SR.chr2.vcf"
-def norm_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.normal.chr2.bam"
-def norm_bai="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.normal.chr2.bam.bai"
-def tum_fn="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.tumor.chr2.bam"
-def tum_bai="/storage1/fs1/dinglab/Active/Projects/yuweiz/projects/HTAN/ccRCC/Longread/t2t/01_compare2sr/00_start_allSample/SRescue/test_data/LR.tumor.chr2.bam.bai"
-
 // Process 1: Merge LR and SR VCFs using SURVIVOR
 // requires SURVIVOR
 process merge_lr_sr {
@@ -79,9 +42,6 @@ process get_only_svs {
     path(polished_vcf)
     
     output:
-//    path("sronly.tsv")
-//    path("lronly.tsv")
-//    path("shared.tsv")
     path("sronly.vcf")
     path("lronly.vcf")
     path("shared.vcf")
@@ -109,6 +69,7 @@ process make_vcf_for_force_calling {
 
 
 // Process 5: Run cuteSV 
+// https://nextflow.io/docs/latest/reference/channel.html
 process run_cutesv_normal {
     label 'cutesv'
     input:
@@ -122,7 +83,7 @@ process run_cutesv_normal {
     
     script:
     """
-    ${params.cutesv} ${bam} ${reference} cutesv.call.vcf ./ --min_mapq 10 -Ivcf ${sronly4fc_vcf} -t 2 -L -1 --report_readid
+    ${params.cutesv} ${normal_bam} ${reference} cutesv.call.vcf ./ --min_mapq 10 -Ivcf ${sronly4fc_vcf} -t 2 -L -1 --report_readid
     """
 }
 
@@ -140,7 +101,7 @@ process run_cutesv_tumor {
     
     script:
     """
-    ${params.cutesv} ${bam} ${reference} cutesv.call.vcf ./ --min_mapq 10 -Ivcf ${sronly4fc_vcf} -t 2 -L -1 --report_readid
+    ${params.cutesv} ${tumor_bam} ${reference} cutesv.call.vcf ./ --min_mapq 10 -Ivcf ${sronly4fc_vcf} -t 2 -L -1 --report_readid
     """
 }
 
@@ -265,9 +226,18 @@ process final_polish_and_compress {
 // sronly.polished.vcf
 // lronly.polished.vcf
 
+// Also TODO:
+// * see here for how to duplicate channels: https://nextflow-io.github.io/patterns/channel-duplication/
+//   should be passing around channels rather than filenames
+// * use FilePairs for index files: https://nextflow-io.github.io/patterns/sort-filepairs-by-samplename/
+// * 
+
+
 workflow {
     // Process 1
-    sr2lr = merge_lr_sr(lrvcf_fn, srvcf_fn)
+    lrvcf = Channel.fromPath(params.lrvcf_fn)
+    srvcf = Channel.fromPath(params.srvcf_fn)
+    sr2lr = merge_lr_sr(lrvcf, srvcf)
 
     // TODO: should not be passing the scripts as a channel from here, should be in the process itself
     // Process 2
@@ -280,22 +250,29 @@ workflow {
     sro4fc = make_vcf_for_force_calling(sro)
 
     // Process 5 - cuteSV on normal
-    normal_cutesv = run_cutesv_normal(norm_fn, norm_bai, params.reference, sro4fc)
+    // https://nextflow-io.github.io/patterns/process-per-file-pairs/
+    // There should be a nicer way to catch the bam and bai together but not clear why not working
+    norm_bam = Channel.fromPath("${params.norm_fn}", checkIfExists:true)
+    norm_bai = Channel.fromPath("${params.norm_fn}.bai", checkIfExists:true)
+    ch_reference = Channel.fromPath(params.reference)
+    normal_cutesv = run_cutesv_normal(norm_bam, norm_bai, ch_reference, sro4fc)
 
     // Process 6 - cuteSV on tumor
-    tumor_cutesv = run_cutesv_tumor(tum_fn, tum_bai, params.reference, sro4fc)
+    tum_bam = Channel.fromPath("${params.tum_fn}", checkIfExists:true)
+    tum_bai = Channel.fromPath("${params.tum_fn}.bai", checkIfExists:true)
+    tumor_cutesv = run_cutesv_tumor(tum_bam, tum_bai, ch_reference, sro4fc)
 
     // Process 7
     (vcf, bed, tsv) = get_final_filter(normal_cutesv, tumor_cutesv)
 
     // Process 8
-    ffc_vcf = process_supporting_reads(bed, tum_fn, vcf, tsv)
+    ffc_vcf = process_supporting_reads(bed, params.tum_fn, vcf, tsv)
 
     // Process 9
     (srp_bpe, srp_vcf, lrp_bpe, lrp_vcf, shp_bpe, shp_vcf) = polish_all_vcfs(sro, lro, sha)
 
     // Process 10
-    sr2lr_sv_vcf = merge_final_vcfs(lrvcf_fn, ffc_vcf)
+    sr2lr_sv_vcf = merge_final_vcfs(lrvcf, ffc_vcf)
 
     // Process 11
     final_polish_and_compress(sr2lr_sv_vcf, shp_bpe)
