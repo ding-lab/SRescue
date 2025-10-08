@@ -1,17 +1,19 @@
 STORAGE_ALLOCATION="m.wyczalkowski"
 
 NF="main.nf"
-CONFIG="nextflow.config"
+#CONFIG="nextflow-demo.config"
+CONFIG="nextflow-HT970.config"
 # OUTD="../nextflow_out" this is defined in the script at this time
 #mkdir -p $OUTD
 
-#ARGS="--preview -with-dag Rescue.png -resume"
-ARGS="-resume"
+>&2 echo NOTE: not resuming deliberately
+#ARGS="-resume"
 
 # reports
-REPORT_OUT="report.html"
-TIMELINE_OUT="timeline.html"
-FLOWCHART_OUT="flowchart.pdf"
+RDIR="report"
+REPORT_OUT="$RDIR/report.html"
+TIMELINE_OUT="$RDIR/timeline.html"
+FLOWCHART_OUT="$RDIR/flowchart.pdf"
 # -with-trace writes out trace.txt
 # -with-timeline [file name]
 REPORT="-with-report $REPORT_OUT -with-trace -with-timeline $TIMELINE_OUT -with-dag $FLOWCHART_OUT"

@@ -125,8 +125,11 @@ process get_final_filter {
 }
 
 // Process 8: Process supporting reads
+// note that this step takes the majority of processing time.  May be good to split the samtools and perl 
+// steps to have a better understanding of performance
 process process_supporting_reads {
     label 'samtools'
+    publishDir 'publishDir'
     
     input:
     path(supread_loci_bed)
@@ -156,6 +159,7 @@ process process_supporting_reads {
 // Process 9: Polish all VCFs
 process polish_all_vcfs {
     label 'perl'
+    publishDir 'publishDir'
     
     input:
     path(sronly_vcf)
@@ -200,6 +204,7 @@ process merge_final_vcfs {
 // Process 11: Final polish and compress
 process final_polish_and_compress {
     label 'perl'
+    publishDir 'publishDir'
     
     input:
     path(final_sr2lr_sv_vcf)
@@ -209,9 +214,12 @@ process final_polish_and_compress {
     path("final.sr2lr.polished.vcf.gz")
     path("final.sr2lr.polished.vcf.gz.tbi")
     
+    // sorting vcf with awk: https://www.biostars.org/p/299659/
     script:
     """
-    05_final_polish.pl ${final_sr2lr_sv_vcf} ${shared_polished_bedpe} final.sr2lr.sv.bedpe final.sr2lr.polished.vcf
+    05_final_polish.pl ${final_sr2lr_sv_vcf} ${shared_polished_bedpe} final.sr2lr.sv.bedpe final.sr2lr.polished-unsort.vcf
+    cat final.sr2lr.polished-unsort.vcf | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > final.sr2lr.polished.vcf
+
     ${params.bgzip} -c final.sr2lr.polished.vcf > final.sr2lr.polished.vcf.gz
     ${params.tabix} final.sr2lr.polished.vcf.gz
     """
@@ -221,17 +229,11 @@ process final_polish_and_compress {
 
 // TODO: stage outputs nicely
 // final.sr2lr.polished.vcf.gz 
+// final.sr2lr.polished.vcf.gz.tbi
 // finalfilter_cutesv.vcf
 // shared.polished.vcf
 // sronly.polished.vcf
 // lronly.polished.vcf
-
-// Also TODO:
-// * see here for how to duplicate channels: https://nextflow-io.github.io/patterns/channel-duplication/
-//   should be passing around channels rather than filenames
-// * use FilePairs for index files: https://nextflow-io.github.io/patterns/sort-filepairs-by-samplename/
-// * 
-
 
 workflow {
     // Process 1
@@ -266,7 +268,7 @@ workflow {
     (vcf, bed, tsv) = get_final_filter(normal_cutesv, tumor_cutesv)
 
     // Process 8
-    ffc_vcf = process_supporting_reads(bed, params.tum_fn, vcf, tsv)
+    ffc_vcf = process_supporting_reads(bed, tum_bam, vcf, tsv)
 
     // Process 9
     (srp_bpe, srp_vcf, lrp_bpe, lrp_vcf, shp_bpe, shp_vcf) = polish_all_vcfs(sro, lro, sha)
