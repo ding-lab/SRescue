@@ -1,30 +1,75 @@
-# SRescue
+# SRescue: Short- and Long-Read SV Integration Pipeline
 
-A tool for validating short-read–specific SVs missed by long-read callers via breakpoint force-genotyping in long-read WGS data.
+A Nextflow pipeline for **integrating short-read (SR) and long-read (LR) structural variant (SV) calls**, rescuing SR-only SVs using LR data, and generating a polished, merged SV callset.
 
-## Details
-Long-read SV callers may miss certain somatic SVs with low VAFs due to
-relatively lower sequencing coverage. In contrast, short-read SV detection
-often suffers from a high false-positive rate caused by mapping ambiguities and
-the lack of spanning-read evidence. To retrieve and validate the
-short-read–specific SVs that were missed by long-read callers, this tool was
-developed. The workflow is summarized as follows:
-1.    Identify SVs detected exclusively by short-read callers,
-2.    Convert the detected duplications into insertions, because the long-read
-      force-genotyping tools typically have limited sensitivity for
-      duplications,
-3.    Use cuteSV to force-genotype the breakpoints of short-read-specific SVs
-      in the long-read normal and tumor data,
-4.    Retrieve short-read–specific SVs that have at least 1 supporting read in
-      the long-read tumor sample and no supporting reads in the matching normal
-      sample,
-5.    Verify whether the retrieved duplications (represented as insertions in
-      the callsets) are true duplications by comparing the supporting read
-      sequences,
-6.    Merge the long-read-specific, common, and validated short-read-specific
-      SVs into the final SV set.
+This pipeline is designed for **tumor–normal WGS** analyses and focuses on improving SV sensitivity by combining complementary sequencing technologies.
 
+---
 
+## Workflow Overview
 
+1. **Merge LR and SR SVs**
+   - Merge LR and SR VCFs using **SURVIVOR**
 
+2. **Polish merged SVs**
+   - Normalize and convert merged VCFs to BEDPE/VCF formats
+
+3. **Classify SVs**
+   - Identify:
+     - SR-only SVs  
+     - LR-only SVs  
+     - Shared SVs
+
+4. **Force calling SR-only SVs**
+   - Generate VCF for force calling
+   - Re-call SR-only SVs in normal and tumor BAMs using **cuteSV**
+
+5. **Somatic filtering**
+   - Compare tumor vs normal calls
+   - Filter and retain high-confidence somatic SVs
+   - Collect supporting read evidence
+
+6. **Final integration**
+   - Merge rescued SR SVs with LR SVs
+   - Final polishing, sorting, compression, and indexing
+
+---
+
+## Inputs
+
+- Long-read SV VCF  
+- Short-read SV VCF  
+- Tumor BAM (+ BAI)  
+- Normal BAM (+ BAI)  
+- Reference genome (FASTA)
+
+---
+
+## Outputs
+
+- final.sr2lr.polished.vcf.gz
+- final.sr2lr.polished.vcf.gz.tbi
+
+---
+
+## Dependencies
+
+- **Nextflow**
+- **SURVIVOR**
+- **cuteSV**
+- **samtools**
+- **bgzip / tabix**
+- **Perl** (custom polishing and filtering scripts)
+
+---
+
+## Usage
+
+```bash
+nextflow run main.nf \
+--lrvcf_fn longread.vcf \
+--srvcf_fn shortread.vcf \
+--norm_fn normal.bam \
+--tum_fn tumor.bam \
+--reference reference.fa
 
